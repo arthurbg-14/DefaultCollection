@@ -102,16 +102,24 @@ export class DefaultService<T extends { [x: string]: any }> {
   }
 
   list(): Observable<(T & {id: string})[]> {
-    const all = this.firebase.getColection<T>(this.path, 'nome').pipe(
+    return this.firebase.getColection<T>(this.path, 'nome').pipe(
         map(query => query.map(doc => {
           const docId = {id: doc.id, ...doc.data()}
           this.cache([docId])
           return docId
         }))
       )
+  }
 
-    return all
-    }
+  listOrderedBy(field: keyof T & string): Observable<(T & {id: string})[]> {
+    return this.firebase.query<T>(this.path, and(), orderBy(field, "asc")).pipe(
+      map(query => query.map(doc => {
+        const docId = {id: doc.id, ...doc.data()}
+        this.cache([docId])
+        return docId
+      }))
+    )
+  }
 
   async edit(id: string, objeto: Partial<T>): Promise<void> {
     return this.firebase.updateDoc(this.path, id, objeto)
