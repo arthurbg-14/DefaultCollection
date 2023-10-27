@@ -101,7 +101,7 @@ export class CollectionService<AppModel extends { [x: string]: any }, DBModel ex
     return setDoc(docRef, data)
   }
 
-  page({field, start, perPage, filter, end}:{field: string, start?: string, perPage?: number, filter?: string, end?: string}): Observable<(T & {id: string})[]> {
+  page({field, start, perPage, filter, end}:{field: string, start?: string, perPage?: number, filter?: string, end?: string}): Observable<AppModel[]> {
     const compositeFilter: QueryFilterConstraint[] = []
     const queryConstraints: QueryNonFilterConstraint[] = [orderBy(field), limit(perPage ?? 10)]
 
