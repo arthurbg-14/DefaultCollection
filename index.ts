@@ -2,13 +2,13 @@ import { inject } from '@angular/core';
 import { Observable, map, firstValueFrom } from 'rxjs';
 import { DocumentData, QueryDocumentSnapshot, Firestore, FirestoreDataConverter, QueryFilterConstraint, QueryNonFilterConstraint, and, doc, docSnapshots, endBefore, getDoc, getDocFromCache, limit, orderBy, startAfter, where, getDocsFromCache, query, collection, collectionSnapshots, addDoc, getDocs, FieldPath, OrderByDirection, updateDoc, UpdateData, deleteDoc, setDoc, WithFieldValue, QueryCompositeFilterConstraint, writeBatch } from '@angular/fire/firestore';
 
-export class DefaultService<AppModel extends { [x: string]: any }, DBModel extends { [x: string]: any } = Omit<AppModel, 'id'> > {
+export class CollectionService<AppModel extends { [x: string]: any }, DBModel extends { [x: string]: any } = Omit<AppModel, 'id'> > {
 
   private firestore = inject(Firestore)
   private path: string
   private converter: FirestoreDataConverter<AppModel, DBModel>
 
-  constructor(path: string, converter: FirestoreDataConverter<AppModel, DBModel>) {
+  constructor(path: string, converter?: FirestoreDataConverter<AppModel, DBModel>) {
     this.path = path
     this.converter = converter ?? {
       fromFirestore(snap: QueryDocumentSnapshot<DocumentData, DocumentData>): AppModel {
