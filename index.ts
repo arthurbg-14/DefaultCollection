@@ -1,142 +1,104 @@
-import { FirebaseService } from 'firebaseservice/firebase.service';
 import { inject } from '@angular/core';
 import { Observable, map, firstValueFrom } from 'rxjs';
-import { QueryFilterConstraint, QueryNonFilterConstraint, and, endBefore, limit, orderBy, startAfter, where } from '@angular/fire/firestore';
+import { DocumentData, QueryDocumentSnapshot, Firestore, FirestoreDataConverter, QueryFilterConstraint, QueryNonFilterConstraint, and, doc, docSnapshots, endBefore, getDoc, getDocFromCache, limit, orderBy, startAfter, where, getDocsFromCache, query, collection, collectionSnapshots, addDoc, getDocs, FieldPath, OrderByDirection, updateDoc, UpdateData, deleteDoc, setDoc, WithFieldValue, QueryCompositeFilterConstraint, writeBatch } from '@angular/fire/firestore';
 
-export class DefaultService<T extends { [x: string]: any }> {
+export class DefaultService<AppModel extends { [x: string]: any }, DBModel extends { [x: string]: any } = Omit<AppModel, 'id'> > {
 
-  private firebase = inject(FirebaseService)
+  private firestore = inject(Firestore)
   private path: string
-  public all: {[id: string]: T & {id: string}} = {}
+  private converter: FirestoreDataConverter<AppModel, DBModel>
 
-  constructor(path: string) {
+  constructor(path: string, converter: FirestoreDataConverter<AppModel, DBModel>) {
     this.path = path
+    this.converter = converter ?? {
+      fromFirestore(snap: QueryDocumentSnapshot<DocumentData, DocumentData>): AppModel {
+        return {id: snap.id, ...snap.data()} as unknown as AppModel
+      },
+      toFirestore(data: AppModel): DBModel {
+        const {id, model} = data
+        return model as DBModel
+      }
+    } 
   }
 
-  get(id: string): Observable<T & {id: string} | undefined> {
+  async getDoc(id: string): Promise<AppModel | undefined> {
+    const docRef = doc(this.firestore, this.path, id).withConverter(this.converter)
 
-    return this.firebase.getDoc<T>(this.path, id).pipe(
-      map(doc => {
-        if (!doc.exists) {return undefined}
-        const docId = {id: doc.id, ...doc.data()!}
-        this.cache([docId])
-        return docId
-      })
-    )
+    return getDocFromCache(docRef).then(doc => doc.data())
   }
 
-  async getCache(id: string): Promise<(T & {id: string}) | undefined> {
-    const doc = this.all[id]
+  getDocSnapshots(id: string): Observable<AppModel | undefined> {
+    const docRef = doc(this.firestore, this.path, id).withConverter(this.converter)
     
-    if (!doc) {return firstValueFrom(this.get(id))}
-
-    return doc
+    return docSnapshots(docRef).pipe(map(doc => doc.data()))
   }
 
-  async getCacheByField(fields: [[keyof T & string, any]]): Promise<(T & {id: string})[]> {
-    let list = Object.values(this.all)
-
-    fields.forEach(field => {
-      list = list.filter(e => {
-        if (!e[field[0]]) {return false}
-
-        if (e[field[0]] == field[1]) {return true}
-
-        if (typeof e[field[0]] == 'string') {
-          if (e[field[0]].toLowerCase().includes(field[1].toLowerCase())) {return true}
-        }
-
-        return false
-      })
+  async getByFields(fields: [[key: keyof DBModel & string, value: any]]): Promise<AppModel[]> {
+    const colRef = collection(this.firestore, this.path).withConverter(this.converter)
+    const compositeFilter = fields.map(([key, value]) => {
+      return where(key, "==", value)
     })
-
-    if (list.length == 0) {
-      return firstValueFrom(this.getByFields(fields))
-    }
-
-    return list
+    const queryData = query(colRef, ...compositeFilter)
+    return getDocsFromCache(queryData).then(docs => docs.docs.map(doc => doc.data()))
   }
 
-  async getCacheByFieldContains(fields: [[keyof T & string, any]]): Promise<(T & {id: string})[]> {
-    let list = Object.values(this.all)
-
-    fields.forEach(field => {
-      list = list.filter(e => {
-        if (!e[field[0]]) {return false}
-
-        if (e[field[0]].includes(field[1])) {return true}
-
-        return false
-      })
+  getByFieldSnapshots(fields: [[key: keyof DBModel & string, value: any]]): Observable<AppModel[]> {
+    const colRef = collection(this.firestore, this.path).withConverter(this.converter)
+    const compositeFilter = fields.map(([key, value]) => {
+      return where(key, "==", value)
     })
-
-    if (list.length == 0) {
-      return firstValueFrom(this.getByFieldContains(fields))
-    }
-
-    return list
+    const queryData = query(colRef, ...compositeFilter)
+    return collectionSnapshots(queryData).pipe(map(docs => docs.map(doc => doc.data())))
   }
 
-  getByFields(fields: [[keyof T & string, any]]): Observable<(T & {id: string})[]> {
-    return this.firebase.getWithField<T>(this.path, fields).pipe(
-      map(query => query.map(doc => {
-        const docId = {id: doc.id, ...doc.data()}
-        this.cache([docId])
-        return docId
-      }))
-    )
+  async getByFieldContains(fields: [[keyof DBModel & string, any]]): Promise<AppModel[]> {
+    const colRef = collection(this.firestore, this.path).withConverter(this.converter)
+    const compositeFilter = fields.map(([key, value]) => {
+      return where(key, "array-contains", value)
+    })
+    const queryData = query(colRef, ...compositeFilter)
+    return getDocsFromCache(queryData).then(docs => docs.docs.map(doc => doc.data()))
   }
 
-  getByFieldContains(fields: [[keyof T & string, any]]): Observable<(T & {id: string})[]> {
-    return this.firebase.getByFieldContain<T>(this.path, fields).pipe(
-      map(query => query.map(doc => {
-        const docId = {id: doc.id, ...doc.data()}
-        this.cache([docId])
-        return docId
-      }))
-    )
+  getByFieldContainsSnapshots(fields: [[keyof DBModel & string, any]]): Observable<AppModel[]> {
+    const colRef = collection(this.firestore, this.path).withConverter(this.converter)
+    const compositeFilter = fields.map(([key, value]) => {
+      return where(key, "array-contains", value)
+    })
+    const queryData = query(colRef, ...compositeFilter)
+    return collectionSnapshots(queryData).pipe(map(docs => docs.map(doc => doc.data())))
   }
 
-  async add(objeto: T): Promise<string> {
-    return this.firebase.addDoc(this.path, objeto).then(ref => ref.id)
+  async list(order?: {fieldPath: string | FieldPath, directionStr?: OrderByDirection | undefined}): Promise<AppModel[]> {
+    const colRef = collection(this.firestore, this.path).withConverter(this.converter)
+    const queryData = order ? query(colRef, orderBy(order.fieldPath, order.directionStr)) : colRef
+    return getDocsFromCache(queryData).then(docs => docs.docs.map(doc => doc.data()))
   }
 
-  list(): Observable<(T & {id: string})[]> {
-    return this.firebase.getColection<T>(this.path, 'nome').pipe(
-        map(query => query.map(doc => {
-          const docId = {id: doc.id, ...doc.data()}
-          this.cache([docId])
-          return docId
-        }))
-      )
+  listSnapshots(order?: {fieldPath: string | FieldPath, directionStr?: OrderByDirection | undefined}): Observable<AppModel[]> {
+    const colRef = collection(this.firestore, this.path).withConverter(this.converter)
+    const queryData = order ? query(colRef, orderBy(order.fieldPath, order.directionStr)) : colRef
+    return collectionSnapshots(queryData).pipe(map(docs => docs.map(doc => doc.data())))
   }
 
-  listOrderedBy(field: keyof T & string): Observable<(T & {id: string})[]> {
-    return this.firebase.query<T>(this.path, and(), orderBy(field, "asc")).pipe(
-      map(query => query.map(doc => {
-        const docId = {id: doc.id, ...doc.data()}
-        this.cache([docId])
-        return docId
-      }))
-    )
+  async add(data: AppModel): Promise<string> {
+    const docRef = collection(this.firestore, this.path).withConverter(this.converter)
+    return addDoc(docRef, data).then(ref => ref.id)
   }
 
-  async edit(id: string, objeto: Partial<T>): Promise<void> {
-    return this.firebase.updateDoc(this.path, id, objeto)
+  async edit(id: string, newDocData: UpdateData<DBModel>): Promise<void> {
+    const docRef = doc(this.firestore, this.path, id).withConverter(this.converter)
+    return updateDoc(docRef, newDocData)
   }
 
   async delete(id: string): Promise<void> {
-    return this.firebase.removeDoc(this.path, id)
+    const docRef = doc(this.firestore, this.path ,id)
+    return deleteDoc(docRef)
   }
 
-  async set(id: string, usuario: T): Promise<void> {
-    return this.firebase.setDoc(this.path, id, usuario)
-  }
-
-  cache(docs: (T & {id: string})[]) {
-    for (const document of docs) {
-      this.all[document.id] = document
-    }
+  async set(id: string,  data: WithFieldValue<AppModel>): Promise<void> {
+    const docRef = doc(this.firestore, this.path, id)
+    return setDoc(docRef, data)
   }
 
   page({field, start, perPage, filter, end}:{field: string, start?: string, perPage?: number, filter?: string, end?: string}): Observable<(T & {id: string})[]> {
@@ -147,16 +109,29 @@ export class DefaultService<T extends { [x: string]: any }> {
     if (start) {queryConstraints.push(startAfter(start))}
     if (end) {queryConstraints.push(endBefore(end))}
 
-    return this.firebase.query<T>(this.path, and(...compositeFilter), ...queryConstraints)
-      .pipe(map(query => query.map(doc => {
-        const docId = {id: doc.id, ...doc.data()}
-        this.cache([docId])
-        return docId
-    })))
-
+    return this.querySnapshots( and(...compositeFilter), ...queryConstraints)
   }
 
-  async changeMultipleDocs(field: string, docs: string[], value: string): Promise<void> {
-    return this.firebase.changeMultipleDocs(this.path, field, docs, value)
+  async query(compositeFilter: QueryCompositeFilterConstraint, ...queryConstraints: QueryNonFilterConstraint[]): Promise<AppModel[]> {
+    const colRef = collection(this.firestore, this.path).withConverter(this.converter)
+    const queryData = query(colRef, compositeFilter, ...queryConstraints)
+    return getDocsFromCache(queryData).then(docs => docs.docs.map(doc => doc.data()))
+  }
+
+  querySnapshots(compositeFilter: QueryCompositeFilterConstraint, ...queryConstraints: QueryNonFilterConstraint[]): Observable<AppModel[]> {
+    const colRef = collection(this.firestore, this.path).withConverter(this.converter)
+    const queryData = query(colRef, compositeFilter, ...queryConstraints)
+    return collectionSnapshots(queryData).pipe(map(docs => docs.map(doc => doc.data())))
+  }
+
+  async changeFieldOfMultipleDocs(field: string, docs: string[], value: any): Promise<void> {
+    const batch = writeBatch(this.firestore)
+
+    for (const document of docs) {
+      const docRef = doc(this.firestore, this.path, document)
+      batch.update(docRef, {[field]: value})
+    }
+
+    return batch.commit()
   }
 }
