@@ -112,6 +112,7 @@ export class CollectionService<AppModel extends { [x: string]: any } = {[x: stri
     if (start) {queryConstraints.push(startAfter(start))}
     if (end) {queryConstraints.push(endBefore(end))}
 
+    
     compositeFilter.push(...customCompositeFilter ?? [])
 
     return this.querySnapshots( and(...compositeFilter), ...queryConstraints)
