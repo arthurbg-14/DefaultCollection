@@ -1,8 +1,8 @@
 import { inject } from '@angular/core';
 import { Observable, map, firstValueFrom } from 'rxjs';
-import { DocumentData, QueryDocumentSnapshot, Firestore, FirestoreDataConverter, QueryFilterConstraint, QueryNonFilterConstraint, and, doc, docSnapshots, endBefore, getDoc, getDocFromCache, limit, orderBy, startAfter, where, getDocsFromCache, query, collection, collectionSnapshots, addDoc, getDocs, FieldPath, OrderByDirection, updateDoc, UpdateData, deleteDoc, setDoc, WithFieldValue, QueryCompositeFilterConstraint, writeBatch } from '@angular/fire/firestore';
+import { DocumentData, QueryDocumentSnapshot, Firestore, FirestoreDataConverter, QueryFilterConstraint, QueryNonFilterConstraint, and, doc, docSnapshots, endBefore, getDoc, getDocFromCache, limit, orderBy, startAfter, where, getDocsFromCache, query, collection, collectionSnapshots, addDoc, getDocs, FieldPath, OrderByDirection, updateDoc, UpdateData, deleteDoc, setDoc, WithFieldValue, QueryCompositeFilterConstraint, writeBatch, QueryConstraint } from '@angular/fire/firestore';
 
-export class CollectionService<AppModel extends { [x: string]: any }, DBModel extends { [x: string]: any } = Omit<AppModel, 'id'> > {
+export class CollectionService<AppModel extends { [x: string]: any } = {[x: string]: any, id: string}, DBModel extends { [x: string]: any } = Omit<AppModel, 'id'> > {
 
   private firestore = inject(Firestore)
   private path: string
@@ -14,9 +14,8 @@ export class CollectionService<AppModel extends { [x: string]: any }, DBModel ex
       fromFirestore(snap: QueryDocumentSnapshot<DocumentData, DocumentData>): AppModel {
         return {id: snap.id, ...snap.data()} as unknown as AppModel
       },
-      toFirestore(data: AppModel): DBModel {
-        const {id, model} = data
-        return model as DBModel
+      toFirestore({id, ...rest}: AppModel): DBModel {
+        return rest as unknown as DBModel
       }
     } 
   }
@@ -24,7 +23,7 @@ export class CollectionService<AppModel extends { [x: string]: any }, DBModel ex
   async getDoc(id: string): Promise<AppModel | undefined> {
     const docRef = doc(this.firestore, this.path, id).withConverter(this.converter)
 
-    return getDocFromCache(docRef).then(doc => doc.data())
+    return getDocFromCache(docRef).catch(error => getDoc(docRef)).then(doc => doc.data())
   }
 
   getDocSnapshots(id: string): Observable<AppModel | undefined> {
@@ -33,46 +32,50 @@ export class CollectionService<AppModel extends { [x: string]: any }, DBModel ex
     return docSnapshots(docRef).pipe(map(doc => doc.data()))
   }
 
-  async getByFields(fields: [[key: keyof DBModel & string, value: any]]): Promise<AppModel[]> {
+  async getByFields(fields: [[key: keyof DBModel & string, value: any]], order?: {fieldPath: string | FieldPath, directionStr?: OrderByDirection | undefined}): Promise<AppModel[]> {
     const colRef = collection(this.firestore, this.path).withConverter(this.converter)
-    const compositeFilter = fields.map(([key, value]) => {
+    const contraints: QueryConstraint[] = fields.map(([key, value]) => {
       return where(key, "==", value)
     })
-    const queryData = query(colRef, ...compositeFilter)
-    return getDocsFromCache(queryData).then(docs => docs.docs.map(doc => doc.data()))
+    order ? contraints.push(orderBy(order.fieldPath, order.directionStr)) : null
+    const queryData = query(colRef, ...contraints)
+    return getDocsFromCache(queryData).then(docs => docs.empty ? getDocs(queryData) : docs).then(docs => docs.docs.map(doc => doc.data()))
   }
 
-  getByFieldSnapshots(fields: [[key: keyof DBModel & string, value: any]]): Observable<AppModel[]> {
+  getByFieldSnapshots(fields: [[key: keyof DBModel & string, value: any]], order?: {fieldPath: string | FieldPath, directionStr?: OrderByDirection | undefined}): Observable<AppModel[]> {
     const colRef = collection(this.firestore, this.path).withConverter(this.converter)
-    const compositeFilter = fields.map(([key, value]) => {
+    const contraints: QueryConstraint[] = fields.map(([key, value]) => {
       return where(key, "==", value)
     })
-    const queryData = query(colRef, ...compositeFilter)
+    order ? contraints.push(orderBy(order.fieldPath, order.directionStr)) : null
+    const queryData = query(colRef, ...contraints)
     return collectionSnapshots(queryData).pipe(map(docs => docs.map(doc => doc.data())))
   }
 
-  async getByFieldContains(fields: [[keyof DBModel & string, any]]): Promise<AppModel[]> {
+  async getByFieldContains(fields: [[keyof DBModel & string, any]], order?: {fieldPath: string | FieldPath, directionStr?: OrderByDirection | undefined}): Promise<AppModel[]> {
     const colRef = collection(this.firestore, this.path).withConverter(this.converter)
-    const compositeFilter = fields.map(([key, value]) => {
+    const contraints: QueryConstraint[] = fields.map(([key, value]) => {
       return where(key, "array-contains", value)
     })
-    const queryData = query(colRef, ...compositeFilter)
-    return getDocsFromCache(queryData).then(docs => docs.docs.map(doc => doc.data()))
+    order ? contraints.push(orderBy(order.fieldPath, order.directionStr)) : null
+    const queryData = query(colRef, ...contraints)
+    return getDocsFromCache(queryData).then(docs => docs.empty ? getDocs(queryData) : docs).then(docs => docs.docs.map(doc => doc.data()))
   }
 
-  getByFieldContainsSnapshots(fields: [[keyof DBModel & string, any]]): Observable<AppModel[]> {
+  getByFieldContainsSnapshots(fields: [[keyof DBModel & string, any]], order?: {fieldPath: string | FieldPath, directionStr?: OrderByDirection | undefined}): Observable<AppModel[]> {
     const colRef = collection(this.firestore, this.path).withConverter(this.converter)
-    const compositeFilter = fields.map(([key, value]) => {
+    const contraints: QueryConstraint[] = fields.map(([key, value]) => {
       return where(key, "array-contains", value)
     })
-    const queryData = query(colRef, ...compositeFilter)
+    order ? contraints.push(orderBy(order.fieldPath, order.directionStr)) : null
+    const queryData = query(colRef, ...contraints)
     return collectionSnapshots(queryData).pipe(map(docs => docs.map(doc => doc.data())))
   }
 
   async list(order?: {fieldPath: string | FieldPath, directionStr?: OrderByDirection | undefined}): Promise<AppModel[]> {
     const colRef = collection(this.firestore, this.path).withConverter(this.converter)
     const queryData = order ? query(colRef, orderBy(order.fieldPath, order.directionStr)) : colRef
-    return getDocsFromCache(queryData).then(docs => docs.docs.map(doc => doc.data()))
+    return getDocsFromCache(queryData).then(docs => docs.empty ? getDocs(queryData) : docs).then(docs => docs.docs.map(doc => doc.data()))
   }
 
   listSnapshots(order?: {fieldPath: string | FieldPath, directionStr?: OrderByDirection | undefined}): Observable<AppModel[]> {
@@ -115,7 +118,7 @@ export class CollectionService<AppModel extends { [x: string]: any }, DBModel ex
   async query(compositeFilter: QueryCompositeFilterConstraint, ...queryConstraints: QueryNonFilterConstraint[]): Promise<AppModel[]> {
     const colRef = collection(this.firestore, this.path).withConverter(this.converter)
     const queryData = query(colRef, compositeFilter, ...queryConstraints)
-    return getDocsFromCache(queryData).then(docs => docs.docs.map(doc => doc.data()))
+    return getDocsFromCache(queryData).then(docs => docs.empty ? getDocs(queryData) : docs).then(docs => docs.docs.map(doc => doc.data()))
   }
 
   querySnapshots(compositeFilter: QueryCompositeFilterConstraint, ...queryConstraints: QueryNonFilterConstraint[]): Observable<AppModel[]> {
