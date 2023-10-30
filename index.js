@@ -46,6 +46,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
         if (ar || !(i in from)) {
@@ -68,9 +79,9 @@ var CollectionService = /** @class */ (function () {
             fromFirestore: function (snap) {
                 return __assign({ id: snap.id }, snap.data());
             },
-            toFirestore: function (data) {
-                var id = data.id, model = data.model;
-                return model;
+            toFirestore: function (_a) {
+                var id = _a.id, rest = __rest(_a, ["id"]);
+                return rest;
             }
         };
     }
@@ -79,7 +90,7 @@ var CollectionService = /** @class */ (function () {
             var docRef;
             return __generator(this, function (_a) {
                 docRef = (0, firestore_1.doc)(this.firestore, this.path, id).withConverter(this.converter);
-                return [2 /*return*/, (0, firestore_1.getDocFromCache)(docRef).then(function (doc) { return doc.data(); })];
+                return [2 /*return*/, (0, firestore_1.getDocFromCache)(docRef).catch(function (error) { return (0, firestore_1.getDoc)(docRef); }).then(function (doc) { return doc.data(); })];
             });
         });
     };
@@ -87,50 +98,54 @@ var CollectionService = /** @class */ (function () {
         var docRef = (0, firestore_1.doc)(this.firestore, this.path, id).withConverter(this.converter);
         return (0, firestore_1.docSnapshots)(docRef).pipe((0, rxjs_1.map)(function (doc) { return doc.data(); }));
     };
-    CollectionService.prototype.getByFields = function (fields) {
+    CollectionService.prototype.getByFields = function (fields, order) {
         return __awaiter(this, void 0, void 0, function () {
-            var colRef, compositeFilter, queryData;
+            var colRef, contraints, queryData;
             return __generator(this, function (_a) {
                 colRef = (0, firestore_1.collection)(this.firestore, this.path).withConverter(this.converter);
-                compositeFilter = fields.map(function (_a) {
+                contraints = fields.map(function (_a) {
                     var key = _a[0], value = _a[1];
                     return (0, firestore_1.where)(key, "==", value);
                 });
-                queryData = firestore_1.query.apply(void 0, __spreadArray([colRef], compositeFilter, false));
-                return [2 /*return*/, (0, firestore_1.getDocsFromCache)(queryData).then(function (docs) { return docs.docs.map(function (doc) { return doc.data(); }); })];
+                order ? contraints.push((0, firestore_1.orderBy)(order.fieldPath, order.directionStr)) : null;
+                queryData = firestore_1.query.apply(void 0, __spreadArray([colRef], contraints, false));
+                return [2 /*return*/, (0, firestore_1.getDocsFromCache)(queryData).then(function (docs) { return docs.empty ? (0, firestore_1.getDocs)(queryData) : docs; }).then(function (docs) { return docs.docs.map(function (doc) { return doc.data(); }); })];
             });
         });
     };
-    CollectionService.prototype.getByFieldSnapshots = function (fields) {
+    CollectionService.prototype.getByFieldSnapshots = function (fields, order) {
         var colRef = (0, firestore_1.collection)(this.firestore, this.path).withConverter(this.converter);
-        var compositeFilter = fields.map(function (_a) {
+        var contraints = fields.map(function (_a) {
             var key = _a[0], value = _a[1];
             return (0, firestore_1.where)(key, "==", value);
         });
-        var queryData = firestore_1.query.apply(void 0, __spreadArray([colRef], compositeFilter, false));
+        order ? contraints.push((0, firestore_1.orderBy)(order.fieldPath, order.directionStr)) : null;
+        var queryData = firestore_1.query.apply(void 0, __spreadArray([colRef], contraints, false));
         return (0, firestore_1.collectionSnapshots)(queryData).pipe((0, rxjs_1.map)(function (docs) { return docs.map(function (doc) { return doc.data(); }); }));
     };
-    CollectionService.prototype.getByFieldContains = function (fields) {
+    CollectionService.prototype.getByFieldContains = function (fields, order) {
         return __awaiter(this, void 0, void 0, function () {
-            var colRef, compositeFilter, queryData;
+            var colRef, contraints, queryData;
             return __generator(this, function (_a) {
                 colRef = (0, firestore_1.collection)(this.firestore, this.path).withConverter(this.converter);
-                compositeFilter = fields.map(function (_a) {
+                contraints = fields.map(function (_a) {
                     var key = _a[0], value = _a[1];
                     return (0, firestore_1.where)(key, "array-contains", value);
                 });
-                queryData = firestore_1.query.apply(void 0, __spreadArray([colRef], compositeFilter, false));
-                return [2 /*return*/, (0, firestore_1.getDocsFromCache)(queryData).then(function (docs) { return docs.docs.map(function (doc) { return doc.data(); }); })];
+                order ? contraints.push((0, firestore_1.orderBy)(order.fieldPath, order.directionStr)) : null;
+                queryData = firestore_1.query.apply(void 0, __spreadArray([colRef], contraints, false));
+                return [2 /*return*/, (0, firestore_1.getDocsFromCache)(queryData).then(function (docs) { return docs.empty ? (0, firestore_1.getDocs)(queryData) : docs; }).then(function (docs) { return docs.docs.map(function (doc) { return doc.data(); }); })];
             });
         });
     };
-    CollectionService.prototype.getByFieldContainsSnapshots = function (fields) {
+    CollectionService.prototype.getByFieldContainsSnapshots = function (fields, order) {
         var colRef = (0, firestore_1.collection)(this.firestore, this.path).withConverter(this.converter);
-        var compositeFilter = fields.map(function (_a) {
+        var contraints = fields.map(function (_a) {
             var key = _a[0], value = _a[1];
             return (0, firestore_1.where)(key, "array-contains", value);
         });
-        var queryData = firestore_1.query.apply(void 0, __spreadArray([colRef], compositeFilter, false));
+        order ? contraints.push((0, firestore_1.orderBy)(order.fieldPath, order.directionStr)) : null;
+        var queryData = firestore_1.query.apply(void 0, __spreadArray([colRef], contraints, false));
         return (0, firestore_1.collectionSnapshots)(queryData).pipe((0, rxjs_1.map)(function (docs) { return docs.map(function (doc) { return doc.data(); }); }));
     };
     CollectionService.prototype.list = function (order) {
@@ -139,7 +154,7 @@ var CollectionService = /** @class */ (function () {
             return __generator(this, function (_a) {
                 colRef = (0, firestore_1.collection)(this.firestore, this.path).withConverter(this.converter);
                 queryData = order ? (0, firestore_1.query)(colRef, (0, firestore_1.orderBy)(order.fieldPath, order.directionStr)) : colRef;
-                return [2 /*return*/, (0, firestore_1.getDocsFromCache)(queryData).then(function (docs) { return docs.docs.map(function (doc) { return doc.data(); }); })];
+                return [2 /*return*/, (0, firestore_1.getDocsFromCache)(queryData).then(function (docs) { return docs.empty ? (0, firestore_1.getDocs)(queryData) : docs; }).then(function (docs) { return docs.docs.map(function (doc) { return doc.data(); }); })];
             });
         });
     };
@@ -185,7 +200,7 @@ var CollectionService = /** @class */ (function () {
         });
     };
     CollectionService.prototype.page = function (_a) {
-        var field = _a.field, start = _a.start, perPage = _a.perPage, filter = _a.filter, end = _a.end;
+        var field = _a.field, start = _a.start, perPage = _a.perPage, filter = _a.filter, end = _a.end, customFilters = _a.customFilters;
         var compositeFilter = [];
         var queryConstraints = [(0, firestore_1.orderBy)(field), (0, firestore_1.limit)(perPage !== null && perPage !== void 0 ? perPage : 10)];
         if (filter) {
@@ -197,6 +212,8 @@ var CollectionService = /** @class */ (function () {
         if (end) {
             queryConstraints.push((0, firestore_1.endBefore)(end));
         }
+        compositeFilter.push.apply(compositeFilter, customFilters !== null && customFilters !== void 0 ? customFilters : []);
+        console.log(compositeFilter);
         return this.querySnapshots.apply(this, __spreadArray([firestore_1.and.apply(void 0, compositeFilter)], queryConstraints, false));
     };
     CollectionService.prototype.query = function (compositeFilter) {
@@ -209,7 +226,7 @@ var CollectionService = /** @class */ (function () {
             return __generator(this, function (_a) {
                 colRef = (0, firestore_1.collection)(this.firestore, this.path).withConverter(this.converter);
                 queryData = firestore_1.query.apply(void 0, __spreadArray([colRef, compositeFilter], queryConstraints, false));
-                return [2 /*return*/, (0, firestore_1.getDocsFromCache)(queryData).then(function (docs) { return docs.docs.map(function (doc) { return doc.data(); }); })];
+                return [2 /*return*/, (0, firestore_1.getDocsFromCache)(queryData).then(function (docs) { return docs.empty ? (0, firestore_1.getDocs)(queryData) : docs; }).then(function (docs) { return docs.docs.map(function (doc) { return doc.data(); }); })];
             });
         });
     };
