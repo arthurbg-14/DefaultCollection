@@ -254,8 +254,8 @@ var CollectionService = /** @class */ (function () {
             });
         });
     };
-    CollectionService.prototype.subcollection = function (id, name) {
-        return new CollectionService("".concat(this.path, "/").concat(id, "/").concat(name));
+    CollectionService.prototype.subcollection = function (id, name, converter) {
+        return new CollectionService("".concat(this.path, "/").concat(id, "/").concat(name), converter);
     };
     return CollectionService;
 }());

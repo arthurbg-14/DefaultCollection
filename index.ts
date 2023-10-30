@@ -141,7 +141,7 @@ export class CollectionService<AppModel extends { [x: string]: any } = {[x: stri
     return batch.commit()
   }
 
-  subcollection<T extends { [x: string]: any }>(id: string, name: string) {
-    return new CollectionService<T>(`${this.path}/${id}/${name}`)
+  subcollection<T extends { [x: string]: any }, D extends { [x: string]: any }>(id: string, name: string, converter?: FirestoreDataConverter<T, D>) {
+    return new CollectionService<T, D>(`${this.path}/${id}/${name}`, converter)
   }
 }
