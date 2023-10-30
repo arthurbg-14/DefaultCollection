@@ -104,7 +104,7 @@ export class CollectionService<AppModel extends { [x: string]: any } = {[x: stri
     return setDoc(docRef, data)
   }
 
-  page({field, start, perPage, filter, end, customCompositeFilter}:{field: keyof DBModel & (string | FieldPath), start?: unknown, perPage?: number, filter?: string, end?: unknown, customCompositeFilter?: QueryCompositeFilterConstraint[]}): Observable<AppModel[]> {
+  page({field, start, perPage, filter, end, customFilters}:{field: keyof DBModel & (string | FieldPath), start?: unknown, perPage?: number, filter?: string, end?: unknown, customCompositeFilter?: QueryFilterConstraint[]}): Observable<AppModel[]> {
     const compositeFilter: QueryFilterConstraint[] = []
     const queryConstraints: QueryNonFilterConstraint[] = [orderBy(field), limit(perPage ?? 10)]
 
@@ -112,8 +112,8 @@ export class CollectionService<AppModel extends { [x: string]: any } = {[x: stri
     if (start) {queryConstraints.push(startAfter(start))}
     if (end) {queryConstraints.push(endBefore(end))}
 
-    
-    compositeFilter.push(...customCompositeFilter ?? [])
+    compositeFilter.push(...customFilters ?? [])
+    console.log(compositeFilter)
 
     return this.querySnapshots( and(...compositeFilter), ...queryConstraints)
   }
