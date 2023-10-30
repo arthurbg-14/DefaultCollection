@@ -109,7 +109,7 @@ export class CollectionService<AppModel extends { [x: string]: any } = {[x: stri
     const compositeFilter: QueryFilterConstraint[] = []
     const queryConstraints: QueryNonFilterConstraint[] = [orderBy(field), limit(perPage ?? 10)]
 
-    if (filter) {compositeFilter.push(where(field, '>=', filter))}
+    if (filter) {compositeFilter.push(where(field, '>=', filter), where(field, "<=", filter + "\uf8ff"))}
     if (start) {queryConstraints.push(startAfter(start))}
     if (end) {queryConstraints.push(endBefore(end))}
 

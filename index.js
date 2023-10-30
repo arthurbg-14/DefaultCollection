@@ -204,7 +204,7 @@ var CollectionService = /** @class */ (function () {
         var compositeFilter = [];
         var queryConstraints = [(0, firestore_1.orderBy)(field), (0, firestore_1.limit)(perPage !== null && perPage !== void 0 ? perPage : 10)];
         if (filter) {
-            compositeFilter.push((0, firestore_1.where)(field, '>=', filter));
+            compositeFilter.push((0, firestore_1.where)(field, '>=', filter), (0, firestore_1.where)(field, "<=", filter + "\uf8ff"));
         }
         if (start) {
             queryConstraints.push((0, firestore_1.startAfter)(start));
