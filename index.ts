@@ -140,4 +140,8 @@ export class CollectionService<AppModel extends { [x: string]: any } = {[x: stri
 
     return batch.commit()
   }
+
+  subcollection<T extends { [x: string]: any }>(id: string, name: string) {
+    return new CollectionService<T>(`${this.path}/${id}/${name}`)
+  }
 }
