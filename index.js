@@ -72,8 +72,7 @@ var core_1 = require("@angular/core");
 var rxjs_1 = require("rxjs");
 var firestore_1 = require("@angular/fire/firestore");
 var CollectionService = /** @class */ (function () {
-    function CollectionService(path, converter) {
-        this.firestore = (0, core_1.inject)(firestore_1.Firestore);
+    function CollectionService(path, converter, firestore) {
         this.path = path;
         this.converter = converter !== null && converter !== void 0 ? converter : {
             fromFirestore: function (snap) {
@@ -84,6 +83,7 @@ var CollectionService = /** @class */ (function () {
                 return rest;
             }
         };
+        this.firestore = firestore !== null && firestore !== void 0 ? firestore : (0, core_1.inject)(firestore_1.Firestore);
     }
     CollectionService.prototype.getDoc = function (id) {
         return __awaiter(this, void 0, void 0, function () {
@@ -255,7 +255,7 @@ var CollectionService = /** @class */ (function () {
         });
     };
     CollectionService.prototype.subcollection = function (id, name, converter) {
-        return new CollectionService("".concat(this.path, "/").concat(id, "/").concat(name), converter);
+        return new CollectionService("".concat(this.path, "/").concat(id, "/").concat(name), converter, this.firestore);
     };
     return CollectionService;
 }());

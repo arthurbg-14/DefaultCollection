@@ -1,10 +1,11 @@
 {
   "name": "angular-fire-collections",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npx tsc index.ts && npm pack"
   },
   "author": "arthurbg-14",
   "license": "ISC",

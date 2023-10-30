@@ -4,11 +4,11 @@ import { DocumentData, QueryDocumentSnapshot, Firestore, FirestoreDataConverter,
 
 export class CollectionService<AppModel extends { [x: string]: any } = {[x: string]: any, id: string}, DBModel extends { [x: string]: any } = Omit<AppModel, 'id'> > {
 
-  private firestore = inject(Firestore)
+  private firestore: Firestore
   private path: string
   private converter: FirestoreDataConverter<AppModel, DBModel>
 
-  constructor(path: string, converter?: FirestoreDataConverter<AppModel, DBModel>) {
+  constructor(path: string, converter?: FirestoreDataConverter<AppModel, DBModel>, firestore?: Firestore) {
     this.path = path
     this.converter = converter ?? {
       fromFirestore(snap: QueryDocumentSnapshot<DocumentData, DocumentData>): AppModel {
@@ -17,7 +17,8 @@ export class CollectionService<AppModel extends { [x: string]: any } = {[x: stri
       toFirestore({id, ...rest}: AppModel): DBModel {
         return rest as unknown as DBModel
       }
-    } 
+    }
+    this.firestore = firestore ?? inject(Firestore)
   }
 
   async getDoc(id: string): Promise<AppModel | undefined> {
@@ -142,6 +143,6 @@ export class CollectionService<AppModel extends { [x: string]: any } = {[x: stri
   }
 
   subcollection<T extends { [x: string]: any }, D extends { [x: string]: any }>(id: string, name: string, converter?: FirestoreDataConverter<T, D>) {
-    return new CollectionService<T, D>(`${this.path}/${id}/${name}`, converter)
+    return new CollectionService<T, D>(`${this.path}/${id}/${name}`, converter, this.firestore)
   }
 }
