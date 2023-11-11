@@ -1,6 +1,6 @@
 {
   "name": "angular-fire-collections",
-  "version": "2.1 .0",
+  "version": "2.2.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -10,8 +10,8 @@
   "author": "arthurbg-14",
   "license": "ISC",
   "dependencies": {
-    "@angular/core": "^16.2.11",
-    "@angular/fire": "^16.0.0",
+    "@angular/core": "^17.0.2",
+    "@angular/fire": "^17.0.0-next.0",
     "typescript": "^5.2.2"
   }
 }
