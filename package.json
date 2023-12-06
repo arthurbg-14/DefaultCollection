@@ -10,6 +10,7 @@
   "author": "arthurbg-14",
   "license": "ISC",
   "dependencies": {
+    "@angular/core": "^17.0.5",
     "@angular/fire": "^17.0.0-next.0",
     "typescript": "^5.2.2"
   }
